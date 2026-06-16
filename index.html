@@ -1,0 +1,611 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Sanjay Enterprise — Stock Scanner</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --green: #1a6b3c;
+    --green-light: #e8f5ee;
+    --green-mid: #2d8a52;
+    --red: #dc2626;
+    --red-light: #fef2f2;
+    --border: #e5e7eb;
+    --text: #111827;
+    --muted: #6b7280;
+    --bg: #f9fafb;
+    --white: #ffffff;
+    --radius: 12px;
+    --radius-sm: 8px;
+  }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+
+  /* TOP BAR */
+  .topbar { background: var(--green); padding: 16px 20px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 10; }
+  .topbar-title { color: white; font-size: 16px; font-weight: 600; }
+  .topbar-sub { color: rgba(255,255,255,0.7); font-size: 12px; margin-top: 1px; }
+  .logout-btn { color: rgba(255,255,255,0.8); font-size: 13px; background: rgba(255,255,255,0.15); border: none; padding: 6px 12px; border-radius: 20px; cursor: pointer; }
+
+  /* SCREENS */
+  .screen { display: none; padding: 20px 16px; max-width: 480px; margin: 0 auto; }
+  .screen.active { display: block; }
+
+  /* LOGIN */
+  .login-card { background: var(--white); border-radius: var(--radius); border: 1px solid var(--border); padding: 28px 24px; margin-top: 24px; }
+  .login-logo { width: 52px; height: 52px; background: var(--green); border-radius: 14px; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px; }
+  .login-logo svg { width: 28px; height: 28px; fill: white; }
+  .login-title { text-align: center; font-size: 20px; font-weight: 700; margin-bottom: 4px; }
+  .login-sub { text-align: center; color: var(--muted); font-size: 13px; margin-bottom: 24px; }
+  label { display: block; font-size: 13px; font-weight: 500; color: var(--muted); margin-bottom: 6px; }
+  input, select, textarea { width: 100%; padding: 12px 14px; border: 1px solid var(--border); border-radius: var(--radius-sm); font-size: 15px; background: var(--white); color: var(--text); margin-bottom: 14px; -webkit-appearance: none; }
+  input:focus, select:focus, textarea:focus { outline: none; border-color: var(--green); box-shadow: 0 0 0 3px rgba(26,107,60,0.1); }
+  textarea { resize: none; height: 72px; }
+
+  /* BUTTONS */
+  .btn { width: 100%; padding: 14px; border: none; border-radius: var(--radius-sm); font-size: 16px; font-weight: 600; cursor: pointer; transition: all 0.15s; }
+  .btn-green { background: var(--green); color: white; }
+  .btn-green:hover { background: var(--green-mid); }
+  .btn-green:active { transform: scale(0.98); }
+  .btn-outline { background: white; color: var(--green); border: 1.5px solid var(--green); }
+  .btn-outline:hover { background: var(--green-light); }
+  .btn-red { background: var(--red); color: white; }
+  .btn-sm { padding: 10px 16px; font-size: 14px; width: auto; border-radius: 20px; }
+  .err { color: var(--red); font-size: 13px; text-align: center; margin-top: 8px; }
+
+  /* HOME */
+  .welcome { font-size: 18px; font-weight: 700; margin: 20px 0 4px; }
+  .welcome-sub { color: var(--muted); font-size: 14px; margin-bottom: 24px; }
+  .action-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 24px; }
+  .action-card { background: var(--white); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px 16px; cursor: pointer; transition: all 0.15s; text-align: center; }
+  .action-card:hover { border-color: var(--green); background: var(--green-light); }
+  .action-card:active { transform: scale(0.97); }
+  .action-icon { font-size: 32px; margin-bottom: 8px; }
+  .action-title { font-size: 15px; font-weight: 700; }
+  .action-sub { font-size: 12px; color: var(--muted); margin-top: 3px; }
+  .action-card.out-card:hover { border-color: var(--red); background: var(--red-light); }
+
+  /* TYPE TOGGLE */
+  .type-toggle { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 20px; }
+  .type-btn { padding: 12px; border: 2px solid var(--border); border-radius: var(--radius-sm); font-size: 15px; font-weight: 600; cursor: pointer; background: var(--white); transition: all 0.15s; text-align: center; }
+  .type-btn.active-in { border-color: var(--green); background: var(--green-light); color: var(--green); }
+  .type-btn.active-out { border-color: var(--red); background: var(--red-light); color: var(--red); }
+
+  /* SHADE DISPLAY */
+  .shade-display { background: var(--white); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; margin-bottom: 16px; }
+  .shade-display.loaded { border-color: var(--green); }
+  .shade-code-tag { font-size: 12px; font-weight: 600; color: var(--green); background: var(--green-light); padding: 3px 8px; border-radius: 20px; display: inline-block; margin-bottom: 6px; }
+  .shade-display-name { font-size: 18px; font-weight: 700; }
+  .shade-display-meta { font-size: 13px; color: var(--muted); margin-top: 2px; }
+  .shade-stock { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border); display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+  .stock-cell { text-align: center; }
+  .stock-cell .sv { font-size: 18px; font-weight: 700; }
+  .stock-cell .sl { font-size: 11px; color: var(--muted); margin-top: 1px; }
+  .stock-cell .sv.low { color: var(--red); }
+
+  /* FORM */
+  .form-section { background: var(--white); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; margin-bottom: 14px; }
+  .form-section-title { font-size: 12px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 12px; }
+  .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+  /* SUCCESS */
+  .success-icon { width: 72px; height: 72px; background: var(--green-light); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 32px auto 20px; }
+  .success-title { text-align: center; font-size: 22px; font-weight: 700; margin-bottom: 8px; }
+  .success-sub { text-align: center; color: var(--muted); font-size: 14px; margin-bottom: 28px; }
+  .success-details { background: var(--white); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; margin-bottom: 24px; }
+  .detail-row { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid var(--border); font-size: 14px; }
+  .detail-row:last-child { border-bottom: none; }
+  .detail-row .dk { color: var(--muted); }
+  .detail-row .dv { font-weight: 600; }
+
+  /* SEARCH */
+  .search-bar { position: relative; margin-bottom: 16px; }
+  .search-bar input { padding-left: 40px; margin-bottom: 0; }
+  .search-icon { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); font-size: 18px; color: var(--muted); }
+  .shade-list { background: var(--white); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+  .shade-item { padding: 14px 16px; border-bottom: 1px solid var(--border); cursor: pointer; display: flex; justify-content: space-between; align-items: center; }
+  .shade-item:last-child { border-bottom: none; }
+  .shade-item:hover { background: var(--green-light); }
+  .shade-item-left .sn { font-size: 15px; font-weight: 600; }
+  .shade-item-left .sc { font-size: 12px; color: var(--muted); margin-top: 2px; }
+  .shade-item-right { font-size: 13px; font-weight: 600; color: var(--green); }
+  .shade-item-right.low { color: var(--red); }
+
+  .spinner { display: inline-block; width: 20px; height: 20px; border: 2px solid rgba(255,255,255,0.3); border-top-color: white; border-radius: 50%; animation: spin 0.7s linear infinite; vertical-align: middle; margin-right: 8px; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+
+<!-- TOP BAR -->
+<div class="topbar" id="topbar">
+  <div>
+    <div class="topbar-title">📦 Stock Scanner</div>
+    <div class="topbar-sub">Sanjay Enterprise</div>
+  </div>
+  <button class="logout-btn" id="logout-btn" onclick="logout()" style="display:none;">Sign out</button>
+</div>
+
+<!-- LOGIN SCREEN -->
+<div class="screen active" id="screen-login">
+  <div class="login-card">
+    <div class="login-logo">
+      <svg viewBox="0 0 24 24"><path d="M3 3h18v4H3zm0 6h18v12H3zm3 3v6h4v-6zm6 0v6h4v-6z"/></svg>
+    </div>
+    <div class="login-title">Stock Scanner</div>
+    <div class="login-sub">Staff access only</div>
+    <label>Your name</label>
+    <input type="text" id="login-name" placeholder="e.g. Ravi, Suresh..." autocomplete="off" />
+    <label>Password</label>
+    <input type="password" id="login-pass" placeholder="Enter password" />
+    <button class="btn btn-green" onclick="doLogin()">Sign in</button>
+    <div class="err" id="login-err"></div>
+  </div>
+</div>
+
+<!-- HOME SCREEN -->
+<div class="screen" id="screen-home">
+  <div class="welcome" id="welcome-name">Welcome!</div>
+  <div class="welcome-sub">What do you want to do?</div>
+  <div class="action-grid">
+    <div class="action-card" onclick="startScan('OUT')">
+      <div class="action-icon">📤</div>
+      <div class="action-title">Stock OUT</div>
+      <div class="action-sub">Sheets leaving warehouse</div>
+    </div>
+    <div class="action-card" onclick="startScan('IN')">
+      <div class="action-icon">📥</div>
+      <div class="action-title">Stock IN</div>
+      <div class="action-sub">New stock arriving</div>
+    </div>
+    <div class="action-card" onclick="showScreen('screen-search')">
+      <div class="action-icon">🔍</div>
+      <div class="action-title">Check Stock</div>
+      <div class="action-sub">Search any shade</div>
+    </div>
+    <div class="action-card" onclick="showScreen('screen-qr')">
+      <div class="action-icon">📋</div>
+      <div class="action-title">QR Labels</div>
+      <div class="action-sub">Print rack labels</div>
+    </div>
+  </div>
+</div>
+
+<!-- SCAN / LOG SCREEN -->
+<div class="screen" id="screen-log">
+  <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;">
+    <button class="btn btn-outline btn-sm" onclick="showScreen('screen-home')">← Back</button>
+    <span style="font-size:16px;font-weight:700;" id="log-title">Log Stock OUT</span>
+  </div>
+
+  <!-- Shade selector -->
+  <div style="margin-bottom:14px;">
+    <label>Shade</label>
+    <div class="search-bar">
+      <span class="search-icon">🔍</span>
+      <input type="text" id="shade-search" placeholder="Type shade code or name..." oninput="filterShades()" onclick="document.getElementById('shade-dropdown').style.display='block'" />
+    </div>
+    <div id="shade-dropdown" style="display:none;background:white;border:1px solid var(--border);border-radius:var(--radius-sm);max-height:200px;overflow-y:auto;margin-top:-8px;">
+    </div>
+  </div>
+
+  <div class="shade-display" id="shade-display">
+    <div style="color:var(--muted);font-size:14px;text-align:center;padding:8px 0;">Search and select a shade above</div>
+  </div>
+
+  <div class="form-section">
+    <div class="form-section-title">Details</div>
+    <label>Location</label>
+    <select id="f-location">
+      <option value="Main">Main Warehouse</option>
+      <option value="Madhavaram">Madhavaram</option>
+    </select>
+    <label>Size</label>
+    <select id="f-size">
+      <option value="8X4">8×4</option>
+      <option value="10X4">10×4</option>
+      <option value="12X4">12×4</option>
+      <option value="Other">Other / Custom</option>
+    </select>
+    <label>Quantity (sheets)</label>
+    <input type="number" id="f-qty" min="1" placeholder="e.g. 10" />
+  </div>
+
+  <div class="form-section">
+    <div class="form-section-title">Party & Batch</div>
+    <label id="party-label">Party / Customer name</label>
+    <input type="text" id="f-party" placeholder="e.g. Ravi Constructions" />
+    <label>Batch number</label>
+    <input type="text" id="f-batch" placeholder="e.g. ETC 0456" />
+    <label>Rack (optional)</label>
+    <input type="text" id="f-rack" placeholder="e.g. B-36, No:45" />
+  </div>
+
+  <button class="btn btn-green" id="submit-btn" onclick="submitLog()">
+    Submit
+  </button>
+  <div class="err" id="log-err" style="margin-top:8px;"></div>
+</div>
+
+<!-- SUCCESS SCREEN -->
+<div class="screen" id="screen-success">
+  <div class="success-icon">✅</div>
+  <div class="success-title">Logged!</div>
+  <div class="success-sub" id="success-sub">Stock OUT recorded successfully</div>
+  <div class="success-details" id="success-details"></div>
+  <button class="btn btn-green" onclick="showScreen('screen-home')">Done — back to home</button>
+  <div style="height:12px;"></div>
+  <button class="btn btn-outline" onclick="logAnother()">Log another</button>
+</div>
+
+<!-- SEARCH SCREEN -->
+<div class="screen" id="screen-search">
+  <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;">
+    <button class="btn btn-outline btn-sm" onclick="showScreen('screen-home')">← Back</button>
+    <span style="font-size:16px;font-weight:700;">Check Stock</span>
+  </div>
+  <div class="search-bar">
+    <span class="search-icon">🔍</span>
+    <input type="text" id="search-q" placeholder="Search shade code or name..." oninput="renderSearch()" />
+  </div>
+  <div id="search-results"></div>
+</div>
+
+<!-- QR LABELS SCREEN -->
+<div class="screen" id="screen-qr">
+  <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;">
+    <button class="btn btn-outline btn-sm" onclick="showScreen('screen-home')">← Back</button>
+    <span style="font-size:16px;font-weight:700;">QR Labels</span>
+  </div>
+  <p style="color:var(--muted);font-size:14px;margin-bottom:16px;">Select which labels to generate for printing. Each QR code, when scanned, opens this form pre-filled with that shade, size and location.</p>
+  <label>Location</label>
+  <select id="qr-location" style="margin-bottom:12px;">
+    <option value="Main">Main Warehouse</option>
+    <option value="Madhavaram">Madhavaram</option>
+  </select>
+  <label>Series filter</label>
+  <select id="qr-series" style="margin-bottom:16px;">
+    <option value="all">All series</option>
+    <option value="ACP - Metallic">ACP - Metallic</option>
+    <option value="ACP - Solid">ACP - Solid</option>
+    <option value="ACP - Wood">ACP - Wood</option>
+    <option value="ACP - High Gloss">ACP - High Gloss</option>
+    <option value="ACP - Marble">ACP - Marble</option>
+    <option value="ACP - Stone">ACP - Stone</option>
+    <option value="ACP - Matte Clay">ACP - Matte Clay</option>
+  </select>
+  <button class="btn btn-green" onclick="generateQRPage()">Generate & Open Labels</button>
+  <p style="font-size:12px;color:var(--muted);margin-top:10px;text-align:center;">Opens a printable page. Use Chrome → Print → Save as PDF or print directly.</p>
+</div>
+
+<script>
+// ============================================================
+// CONFIGURATION — update SCRIPT_URL after deploying Apps Script
+// ============================================================
+const SCRIPT_URL = "YOUR_APPS_SCRIPT_URL_HERE";
+const APP_URL = window.location.href.split('?')[0];
+
+const USERS = {
+  "admin": "sanjay2024",
+  "hirak": "hirak123",
+  "ravi": "staff123",
+  "suresh": "staff123",
+  "kumar": "staff123",
+  "manager": "manage24"
+};
+
+const STOCK = [
+  {code:"101",name:"Bright Silver",series:"ACP - Metallic",main8:48,main10:39,main12:26,madh8:180,madh10:87,madh12:109,grand:489},
+  {code:"102",name:"Silver",series:"ACP - Metallic",main8:26,main10:29,main12:35,madh8:105,madh10:20,madh12:65,grand:280},
+  {code:"103",name:"Champagne Silver",series:"ACP - Metallic",main8:12,main10:32,main12:8,madh8:0,madh10:0,madh12:0,grand:52},
+  {code:"104",name:"Champagne Gold",series:"ACP - Metallic",main8:41,main10:14,main12:61,madh8:0,madh10:20,madh12:0,grand:136},
+  {code:"105",name:"Jade Green",series:"ACP - Metallic",main8:0,main10:4,main12:10,madh8:0,madh10:0,madh12:0,grand:14},
+  {code:"107",name:"Red",series:"ACP - Solid",main8:69,main10:25,main12:54,madh8:0,madh10:0,madh12:0,grand:148},
+  {code:"108",name:"Yellow",series:"ACP - Solid",main8:33,main10:76,main12:22,madh8:15,madh10:10,madh12:15,grand:171},
+  {code:"109",name:"Rich Gold",series:"ACP - Metallic",main8:13,main10:47,main12:37,madh8:0,madh10:0,madh12:30,grand:127},
+  {code:"110",name:"Tomato Red",series:"ACP - Solid",main8:10,main10:21,main12:23,madh8:0,madh10:0,madh12:0,grand:54},
+  {code:"111",name:"Pure White",series:"ACP - Solid",main8:108,main10:25,main12:48,madh8:0,madh10:19,madh12:21,grand:221},
+  {code:"112",name:"Off White",series:"ACP - Solid",main8:462,main10:52,main12:139,madh8:259,madh10:10,madh12:150,grand:1072},
+  {code:"113",name:"Copper",series:"ACP - Metallic",main8:6,main10:16,main12:19,madh8:20,madh10:15,madh12:18,grand:94},
+  {code:"114",name:"Black",series:"ACP - Solid",main8:33,main10:7,main12:51,madh8:320,madh10:66,madh12:157,grand:634},
+  {code:"115",name:"Dark Green",series:"ACP - Solid",main8:26,main10:24,main12:17,madh8:30,madh10:12,madh12:83,grand:192},
+  {code:"116",name:"HP Blue",series:"ACP - Solid",main8:24,main10:28,main12:25,madh8:0,madh10:10,madh12:10,grand:97},
+  {code:"117",name:"Navy Blue",series:"ACP - Solid",main8:38,main10:45,main12:16,madh8:10,madh10:0,madh12:0,grand:109},
+  {code:"119",name:"Grass Green",series:"ACP - Solid",main8:5,main10:18,main12:7,madh8:0,madh10:0,madh12:0,grand:30},
+  {code:"120",name:"Metallic Bronze",series:"ACP - Metallic",main8:24,main10:20,main12:35,madh8:15,madh10:0,madh12:0,grand:94},
+  {code:"123",name:"Copper Bronze",series:"ACP - Metallic",main8:19,main10:64,main12:36,madh8:0,madh10:0,madh12:0,grand:119},
+  {code:"124",name:"Warm Grey",series:"ACP - Solid",main8:65,main10:22,main12:90,madh8:30,madh10:16,madh12:0,grand:223},
+  {code:"126",name:"Dark Grey Silver",series:"ACP - Metallic",main8:51,main10:18,main12:63,madh8:384,madh10:113,madh12:330,grand:959},
+  {code:"127",name:"Wine Red",series:"ACP - Solid",main8:29,main10:20,main12:31,madh8:10,madh10:10,madh12:0,grand:100},
+  {code:"128",name:"Signal Orange",series:"ACP - Solid",main8:53,main10:69,main12:30,madh8:15,madh10:0,madh12:0,grand:167},
+  {code:"133",name:"Beige (GL)",series:"ACP - Solid",main8:77,main10:56,main12:113,madh8:0,madh10:0,madh12:0,grand:246},
+  {code:"134",name:"Rose Gold",series:"ACP - Metallic",main8:24,main10:22,main12:36,madh8:15,madh10:0,madh12:0,grand:97},
+  {code:"137",name:"Blue",series:"ACP - Solid",main8:38,main10:36,main12:64,madh8:0,madh10:0,madh12:0,grand:138},
+  {code:"138",name:"Warm White",series:"ACP - Solid",main8:13,main10:12,main12:41,madh8:14,madh10:8,madh12:17,grand:105},
+  {code:"140",name:"Cement Grey",series:"ACP - Solid",main8:55,main10:67,main12:43,madh8:0,madh10:0,madh12:0,grand:165},
+  {code:"142",name:"Slate Grey",series:"ACP - Solid",main8:25,main10:17,main12:7,madh8:0,madh10:10,madh12:0,grand:59},
+  {code:"148",name:"Gun Metallic",series:"ACP - Metallic",main8:72,main10:23,main12:37,madh8:0,madh10:0,madh12:0,grand:132},
+  {code:"152",name:"Metallic Grey",series:"ACP - Metallic",main8:33,main10:9,main12:111,madh8:267,madh10:115,madh12:130,grand:665},
+  {code:"154",name:"Bright Beige",series:"ACP - Solid",main8:19,main10:8,main12:60,madh8:0,madh10:0,madh12:0,grand:87},
+  {code:"203",name:"Browny Marble",series:"ACP - Marble",main8:12,main10:0,main12:30,madh8:0,madh10:0,madh12:0,grand:42},
+  {code:"210",name:"Travertino",series:"ACP - Marble",main8:20,main10:28,main12:55,madh8:0,madh10:0,madh12:15,grand:118},
+  {code:"211",name:"Pearl Travertino",series:"ACP - Marble",main8:16,main10:5,main12:13,madh8:0,madh10:0,madh12:0,grand:34},
+  {code:"252",name:"Raw Graphite",series:"ACP - Stone",main8:10,main10:20,main12:27,madh8:0,madh10:0,madh12:0,grand:57},
+  {code:"255",name:"Marvel Grey",series:"ACP - Stone",main8:20,main10:11,main12:14,madh8:0,madh10:0,madh12:0,grand:45},
+  {code:"303",name:"Chocolate Brown",series:"ACP - Solid",main8:28,main10:32,main12:37,madh8:0,madh10:0,madh12:10,grand:107},
+  {code:"340",name:"Golden Cedar",series:"ACP - Wood",main8:65,main10:26,main12:49,madh8:2,madh10:10,madh12:10,grand:162},
+  {code:"341",name:"Acacia Light",series:"ACP - Wood",main8:27,main10:23,main12:14,madh8:0,madh10:0,madh12:0,grand:64},
+  {code:"351",name:"American Walnut",series:"ACP - Wood",main8:15,main10:22,main12:38,madh8:0,madh10:0,madh12:0,grand:75},
+  {code:"362",name:"Palisandro Brown",series:"ACP - Wood",main8:33,main10:12,main12:73,madh8:0,madh10:0,madh12:0,grand:118},
+  {code:"372",name:"Burma Teak",series:"ACP - Wood",main8:118,main10:98,main12:117,madh8:19,madh10:0,madh12:28,grand:380},
+  {code:"387",name:"Aeon Walnut (deep)",series:"ACP - Wood",main8:94,main10:94,main12:81,madh8:182,madh10:57,madh12:200,grand:708},
+  {code:"390",name:"Mahogany Premium",series:"ACP - Wood",main8:33,main10:34,main12:12,madh8:33,madh10:0,madh12:9,grand:121},
+  {code:"391",name:"Rose Wood Classic",series:"ACP - Wood",main8:90,main10:44,main12:111,madh8:0,madh10:0,madh12:0,grand:245},
+  {code:"392",name:"Rustic Wood",series:"ACP - Wood",main8:62,main10:26,main12:67,madh8:10,madh10:0,madh12:0,grand:165},
+  {code:"393",name:"Royal Teak",series:"ACP - Wood",main8:24,main10:28,main12:13,madh8:30,madh10:0,madh12:20,grand:115},
+  {code:"907",name:"High Gloss Red",series:"ACP - High Gloss",main8:18,main10:35,main12:100,madh8:157,madh10:29,madh12:100,grand:439},
+  {code:"908",name:"High Gloss White/Milky",series:"ACP - High Gloss",main8:13,main10:31,main12:35,madh8:0,madh10:0,madh12:0,grand:79},
+  {code:"911",name:"High Gloss White FR",series:"ACP - High Gloss",main8:18,main10:41,main12:73,madh8:0,madh10:0,madh12:0,grand:132},
+  {code:"914",name:"High Gloss Black",series:"ACP - High Gloss",main8:5,main10:9,main12:9,madh8:0,madh10:0,madh12:0,grand:23},
+  {code:"1020",name:"Porcelain White",series:"ACP - Matte Clay",main8:25,main10:8,main12:35,madh8:0,madh10:0,madh12:0,grand:68},
+  {code:"1021",name:"Fossil Grey",series:"ACP - Matte Clay",main8:18,main10:26,main12:2,madh8:6,madh10:15,madh12:19,grand:86},
+  {code:"1023",name:"Cream Beige",series:"ACP - Matte Clay",main8:24,main10:23,main12:2,madh8:0,madh10:0,madh12:67,grand:116},
+  {code:"1024",name:"Desert Tan",series:"ACP - Matte Clay",main8:6,main10:4,main12:45,madh8:0,madh10:0,madh12:0,grand:55},
+  {code:"1025",name:"Satin Black",series:"ACP - Matte Clay",main8:11,main10:10,main12:13,madh8:0,madh10:0,madh12:0,grand:34},
+];
+
+let currentUser = null;
+let selectedShade = null;
+let currentType = 'OUT';
+let lastLog = null;
+
+// Check URL params for pre-fill from QR
+const params = new URLSearchParams(window.location.search);
+if (params.get('shade')) {
+  const autoCode = params.get('shade');
+  const autoLoc = params.get('loc') || 'Main';
+  const autoSize = params.get('size') || '8X4';
+  window.addEventListener('load', () => {
+    // auto-login check skipped — user must login first
+    sessionStorage.setItem('qr_shade', autoCode);
+    sessionStorage.setItem('qr_loc', autoLoc);
+    sessionStorage.setItem('qr_size', autoSize);
+  });
+}
+
+function doLogin() {
+  const name = document.getElementById('login-name').value.trim().toLowerCase();
+  const pass = document.getElementById('login-pass').value;
+  const err = document.getElementById('login-err');
+  if (!name) { err.textContent = 'Please enter your name'; return; }
+  if (USERS[name] && USERS[name] === pass) {
+    currentUser = name;
+    document.getElementById('logout-btn').style.display = 'block';
+    document.getElementById('welcome-name').textContent = 'Hi ' + name.charAt(0).toUpperCase() + name.slice(1) + '! 👋';
+    showScreen('screen-home');
+    // Check for QR pre-fill
+    const qrShade = sessionStorage.getItem('qr_shade');
+    if (qrShade) {
+      sessionStorage.removeItem('qr_shade');
+      const loc = sessionStorage.getItem('qr_loc') || 'Main';
+      const sz = sessionStorage.getItem('qr_size') || '8X4';
+      sessionStorage.removeItem('qr_loc');
+      sessionStorage.removeItem('qr_size');
+      startScan('OUT');
+      setTimeout(() => {
+        const shade = STOCK.find(s => s.code === qrShade);
+        if (shade) selectShade(shade);
+        document.getElementById('f-location').value = loc;
+        document.getElementById('f-size').value = sz;
+      }, 100);
+    }
+  } else {
+    err.textContent = 'Wrong password. Ask your manager.';
+  }
+}
+
+function logout() {
+  currentUser = null;
+  document.getElementById('logout-btn').style.display = 'none';
+  showScreen('screen-login');
+}
+
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  window.scrollTo(0,0);
+}
+
+function startScan(type) {
+  currentType = type;
+  selectedShade = null;
+  document.getElementById('log-title').textContent = 'Log Stock ' + type;
+  document.getElementById('submit-btn').textContent = 'Submit ' + type;
+  document.getElementById('submit-btn').style.background = type === 'OUT' ? '#dc2626' : '#1a6b3c';
+  document.getElementById('party-label').textContent = type === 'OUT' ? 'Customer / Party name' : 'Supplier / Source';
+  document.getElementById('shade-display').innerHTML = '<div style="color:var(--muted);font-size:14px;text-align:center;padding:8px 0;">Search and select a shade above</div>';
+  document.getElementById('shade-display').classList.remove('loaded');
+  document.getElementById('shade-search').value = '';
+  document.getElementById('shade-dropdown').style.display = 'none';
+  document.getElementById('f-qty').value = '';
+  document.getElementById('f-party').value = '';
+  document.getElementById('f-batch').value = '';
+  document.getElementById('f-rack').value = '';
+  document.getElementById('log-err').textContent = '';
+  showScreen('screen-log');
+}
+
+function filterShades() {
+  const q = document.getElementById('shade-search').value.trim().toLowerCase();
+  const dd = document.getElementById('shade-dropdown');
+  if (!q) { dd.style.display = 'none'; return; }
+  const matches = STOCK.filter(s => s.code.includes(q) || s.name.toLowerCase().includes(q) || s.series.toLowerCase().includes(q)).slice(0, 8);
+  if (!matches.length) { dd.style.display = 'none'; return; }
+  dd.innerHTML = matches.map(s => `<div onclick="selectShade(${JSON.stringify(s).replace(/"/g,'&quot;')})" style="padding:10px 14px;cursor:pointer;border-bottom:1px solid #f3f4f6;font-size:14px;" onmouseover="this.style.background='#e8f5ee'" onmouseout="this.style.background=''">${s.code} — ${s.name} <span style="color:#6b7280;font-size:12px;">(${s.grand} sheets)</span></div>`).join('');
+  dd.style.display = 'block';
+}
+
+function selectShade(s) {
+  selectedShade = s;
+  document.getElementById('shade-search').value = s.code + ' — ' + s.name;
+  document.getElementById('shade-dropdown').style.display = 'none';
+  const low = s.grand <= 10;
+  document.getElementById('shade-display').classList.add('loaded');
+  document.getElementById('shade-display').innerHTML = `
+    <span class="shade-code-tag">${s.code}</span>
+    <div class="shade-display-name">${s.name}</div>
+    <div class="shade-display-meta">${s.series}</div>
+    <div class="shade-stock">
+      <div class="stock-cell"><div class="sv ${low?'low':''}">${s.grand}</div><div class="sl">Total</div></div>
+      <div class="stock-cell"><div class="sv">${s.main8+s.main10+s.main12}</div><div class="sl">Main</div></div>
+      <div class="stock-cell"><div class="sv">${s.madh8+s.madh10+s.madh12}</div><div class="sl">Madhavaram</div></div>
+    </div>`;
+}
+
+function submitLog() {
+  const err = document.getElementById('log-err');
+  if (!selectedShade) { err.textContent = 'Please select a shade first'; return; }
+  const qty = parseInt(document.getElementById('f-qty').value);
+  if (!qty || qty < 1) { err.textContent = 'Please enter a valid quantity'; return; }
+  const party = document.getElementById('f-party').value.trim();
+  if (!party) { err.textContent = 'Please enter party / customer name'; return; }
+
+  const payload = {
+    type: currentType,
+    shadeCode: selectedShade.code,
+    shadeName: selectedShade.name,
+    size: document.getElementById('f-size').value,
+    qty: qty,
+    location: document.getElementById('f-location').value,
+    party: party,
+    batch: document.getElementById('f-batch').value.trim(),
+    rack: document.getElementById('f-rack').value.trim(),
+    staff: currentUser,
+    grade: ""
+  };
+
+  lastLog = payload;
+
+  const btn = document.getElementById('submit-btn');
+  btn.innerHTML = '<span class="spinner"></span>Saving...';
+  btn.disabled = true;
+
+  if (SCRIPT_URL === "YOUR_APPS_SCRIPT_URL_HERE") {
+    setTimeout(() => showSuccess(payload), 800);
+    return;
+  }
+
+  fetch(SCRIPT_URL, {
+    method: 'POST',
+    body: JSON.stringify(payload)
+  }).then(r => r.json()).then(data => {
+    if (data.status === 'success') showSuccess(payload);
+    else { err.textContent = 'Error: ' + data.message; btn.disabled = false; btn.textContent = 'Submit ' + currentType; }
+  }).catch(e => {
+    err.textContent = 'Network error. Check connection and try again.';
+    btn.disabled = false; btn.textContent = 'Submit ' + currentType;
+  });
+}
+
+function showSuccess(p) {
+  document.getElementById('success-sub').textContent = 'Stock ' + p.type + ' recorded — ' + p.qty + ' sheets of ' + p.shadeName;
+  document.getElementById('success-details').innerHTML = [
+    {k:'Type', v: p.type}, {k:'Shade', v: p.shadeCode + ' ' + p.shadeName},
+    {k:'Size', v: p.size}, {k:'Qty', v: p.qty + ' sheets'},
+    {k:'Location', v: p.location}, {k:'Party', v: p.party},
+    p.batch ? {k:'Batch', v: p.batch} : null,
+    {k:'Logged by', v: p.staff}
+  ].filter(Boolean).map(r => `<div class="detail-row"><span class="dk">${r.k}</span><span class="dv">${r.v}</span></div>`).join('');
+  showScreen('screen-success');
+}
+
+function logAnother() {
+  startScan(currentType);
+}
+
+function renderSearch() {
+  const q = document.getElementById('search-q').value.trim().toLowerCase();
+  const res = document.getElementById('search-results');
+  const list = q ? STOCK.filter(s => s.code.includes(q) || s.name.toLowerCase().includes(q)) : STOCK.slice(0,20);
+  if (!list.length) { res.innerHTML = '<div style="text-align:center;padding:24px;color:var(--muted);">No shades found</div>'; return; }
+  res.innerHTML = '<div class="shade-list">' + list.map(s => {
+    const low = s.grand <= 10 && s.grand > 0;
+    return `<div class="shade-item">
+      <div class="shade-item-left">
+        <div class="sn">${s.code} — ${s.name}</div>
+        <div class="sc">${s.series} · 8×4: ${s.main8+s.madh8} · 10×4: ${s.main10+s.madh10} · 12×4: ${s.main12+s.madh12}</div>
+      </div>
+      <div class="shade-item-right ${low?'low':''}">${s.grand} sheets</div>
+    </div>`;
+  }).join('') + '</div>';
+}
+
+function generateQRPage() {
+  const loc = document.getElementById('qr-location').value;
+  const series = document.getElementById('qr-series').value;
+  const filtered = series === 'all' ? STOCK : STOCK.filter(s => s.series === series);
+  const sizes = ['8X4','10X4','12X4'];
+  let html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>QR Labels — ${loc}</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"><\/script>
+  <style>
+    body{font-family:sans-serif;background:#fff;}
+    .grid{display:flex;flex-wrap:wrap;gap:8px;padding:16px;}
+    .label{width:160px;border:1px solid #ccc;border-radius:8px;padding:10px;text-align:center;page-break-inside:avoid;}
+    .lcode{font-size:11px;font-weight:700;color:#1a6b3c;margin-bottom:2px;}
+    .lname{font-size:10px;font-weight:600;margin-bottom:2px;}
+    .lmeta{font-size:9px;color:#666;margin-bottom:6px;}
+    .qr{display:flex;justify-content:center;}
+    @media print{body{margin:0;}.grid{gap:4px;padding:8px;}}
+  </style></head><body>
+  <div style="text-align:center;padding:12px;font-size:13px;color:#666;font-family:sans-serif;">
+    Sanjay Enterprise — QR Labels — ${loc} — Print & stick on racks
+    <button onclick="window.print()" style="margin-left:12px;padding:6px 14px;background:#1a6b3c;color:white;border:none;border-radius:6px;cursor:pointer;">🖨 Print</button>
+  </div>
+  <div class="grid" id="grid"></div>
+  <script>
+  const labels = [`;
+
+  filtered.forEach(s => {
+    sizes.forEach(sz => {
+      const stockKey = loc === 'Main' ? `main${sz.replace('X4','')}` : `madh${sz.replace('X4','')}`;
+      // Only generate label if there's stock in that size/location
+      const qty = s[loc === 'Main' ? 'main'+sz.replace('X4','') : 'madh'+sz.replace('X4','')] || 0;
+      if (qty > 0) {
+        const url = `${APP_URL}?shade=${s.code}&loc=${loc}&size=${sz}`;
+        html += `{code:"${s.code}",name:"${s.name}",size:"${sz}",loc:"${loc}",qty:${qty},url:"${url}"},`;
+      }
+    });
+  });
+
+  html += `];
+  const grid = document.getElementById('grid');
+  labels.forEach((l,i) => {
+    const div = document.createElement('div');
+    div.className = 'label';
+    div.innerHTML = '<div class="lcode">'+l.code+'</div><div class="lname">'+l.name+'</div><div class="lmeta">'+l.size+' · '+l.loc+' · '+l.qty+' sheets</div><div class="qr" id="qr'+i+'"></div>';
+    grid.appendChild(div);
+    new QRCode(document.getElementById('qr'+i), {text:l.url,width:110,height:110,correctLevel:QRCode.CorrectLevel.M});
+  });
+  <\/script></body></html>`;
+
+  const w = window.open('','_blank');
+  w.document.write(html);
+  w.document.close();
+}
+
+// Init search on load
+document.addEventListener('DOMContentLoaded', () => {
+  renderSearch();
+  document.addEventListener('click', e => {
+    if (!e.target.closest('#shade-search') && !e.target.closest('#shade-dropdown')) {
+      document.getElementById('shade-dropdown').style.display = 'none';
+    }
+  });
+  if (params.get('shade')) {
+    document.getElementById('login-name').focus();
+  }
+});
+</script>
+</body>
+</html>
